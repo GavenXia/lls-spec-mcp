@@ -128,13 +128,48 @@ origin-requirements/
 
 ```toml
 # Pandoc 可执行文件路径（可选）
+# 如果未指定，系统会尝试在 PATH 中查找 Pandoc
+# macOS/Linux 示例：
 pandocPath = "/usr/local/bin/pandoc"
+pandocPath = "/opt/homebrew/bin/pandoc"  # Apple Silicon 上的 Homebrew
+# Windows 示例：
+# pandocPath = "C:\\Program Files\\Pandoc\\pandoc.exe"
 
-# 转换器 API URL（可选，用于降级）
-converterApiUrl = "https://your-converter-api.com"
+# 转换器 API URL（可选，用于备用）
+# 当 Pandoc 不可用或转换失败时使用
+# API 应接受带有 multipart/form-data 的 POST 请求
+converterApiUrl = "https://your-converter-api.com/convert"
 
-# API 超时时间（毫秒）
+# API 超时时间（毫秒，默认：30000）
+# 等待 API 响应的最长时间
 apiTimeout = 30000
+```
+
+### 配置优先级
+
+转换系统按以下顺序尝试方法：
+
+1. **本地 Pandoc**（如果配置了 `pandocPath` 或在 PATH 中找到）
+   - 最快且最可靠
+   - 离线工作
+   - 推荐日常使用
+
+2. **转换器 API**（如果配置了 `converterApiUrl`）
+   - Pandoc 不可用时的备用方案
+   - 需要互联网连接
+   - 受 API 超时限制
+
+### 检查 Pandoc 安装
+
+验证 Pandoc 是否已安装并可访问：
+
+```bash
+# 检查 Pandoc 是否已安装
+pandoc --version
+
+# 查找 Pandoc 位置
+which pandoc       # macOS/Linux
+where pandoc       # Windows
 ```
 
 ## 相关工具

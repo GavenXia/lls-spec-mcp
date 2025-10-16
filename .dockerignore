@@ -77,15 +77,15 @@ docker-compose*.yml
 # VSCode extension
 vscode-extension/
 
-# Scripts (开发用)
-scripts/
+# Scripts - 保留构建脚本
+# scripts/  # 需要用于构建，不能排除
 
 # Package lock files (使用 package-lock.json 即可)
 yarn.lock
 pnpm-lock.yaml
 
-# TypeScript config
-tsconfig.json
+# TypeScript config - 保留用于构建
+# tsconfig.json  # 需要用于 TypeScript 编译，不能排除
 
 # Editor configs
 .editorconfig

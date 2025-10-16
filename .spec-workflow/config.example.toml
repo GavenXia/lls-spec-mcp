@@ -52,6 +52,29 @@
 # 默认："en"
 # templateLang = "en"
 
+# 文档转换器配置
+# ==================================
+
+# Pandoc 可执行文件路径
+# 用于 Word 到 Markdown 转换的 Pandoc 可执行文件路径。
+# 如果未指定，系统将尝试在 PATH 中查找 Pandoc。
+# 转换 Word 文档（.docx、.doc）为 Markdown 时需要。
+# 默认：在系统 PATH 中搜索
+# pandocPath = "/usr/local/bin/pandoc"
+# pandocPath = "/opt/homebrew/bin/pandoc"  # macOS Homebrew 示例
+# pandocPath = "C:\Program Files\Pandoc\pandoc.exe"  # Windows 示例
+
+# 转换器 API URL
+# 当 Pandoc 不可用时用于文档转换的备用 API 端点。
+# API 应接受带有 multipart/form-data 的 POST 请求。
+# 可选：如果未设置，仅可使用本地 Pandoc 转换。
+# converterApiUrl = "https://your-converter-api.com/convert"
+
+# API 超时时间（毫秒）
+# 文档转换期间等待 API 响应的最长时间。
+# 默认：30000（30 秒）
+# apiTimeout = 30000
+
 # 配置示例：
 # =====================
 
@@ -81,3 +104,9 @@
 # -------------------------------------
 # templateLang = "zh"
 # autoStartDashboard = true
+
+# 示例 6：自定义 Pandoc 路径的文档转换
+# --------------------------------------------------
+# pandocPath = "/opt/homebrew/bin/pandoc"
+# converterApiUrl = "https://converter.example.com/api"
+# apiTimeout = 60000
