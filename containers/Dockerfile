@@ -1,42 +1,106 @@
-# Build stage
+# =============================================================================
+# Spec-Workflow MCP Server Docker Image
+# =============================================================================
+# Multi-stage build for optimized production image with Pandoc support
+# Supports: amd64, arm64
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Build Stage: Compile TypeScript and build dashboard
+# -----------------------------------------------------------------------------
 FROM node:24-alpine AS builder
-RUN apk add --no-cache git
+
+# Install build dependencies
+RUN apk add --no-cache \
+    git \
+    python3 \
+    make \
+    g++
 
 WORKDIR /app
 
-# Clone the MCP server during build
-RUN git clone --depth 1 https://github.com/GavenXia/lls-spec-mcp.git .
+# Copy package files
+COPY package*.json ./
 
-# Install dependencies and build
-RUN npm ci && npm run build
+# Install ALL dependencies (including devDependencies for build)
+RUN npm ci
 
-# Runtime stage
+# Copy source code
+COPY . .
+
+# Build the application (TypeScript + Dashboard)
+RUN npm run build
+
+# Verify build output
+RUN ls -la /app/dist && \
+    test -f /app/dist/index.js && \
+    echo "✅ Build successful"
+
+# -----------------------------------------------------------------------------
+# Runtime Stage: Minimal production image
+# -----------------------------------------------------------------------------
 FROM node:24-alpine
+
+# Metadata labels (OCI standard)
+LABEL org.opencontainers.image.title="Spec-Workflow MCP Server"
+LABEL org.opencontainers.image.description="MCP server for spec-driven development workflow with real-time web dashboard"
+LABEL org.opencontainers.image.version="0.0.2"
+LABEL org.opencontainers.image.vendor="GavenXia"
+LABEL org.opencontainers.image.source="https://github.com/GavenXia/lls-spec-mcp"
+LABEL org.opencontainers.image.licenses="GPL-3.0"
+LABEL org.opencontainers.image.authors="gavinxia"
+LABEL maintainer="gavinxia"
+
 WORKDIR /app
 
-# Install Pandoc for document conversion
-RUN apk add --no-cache pandoc && \
+# Install runtime dependencies:
+# - pandoc: Document conversion (Word ↔ Markdown)
+# - tini: Init system for proper signal handling
+RUN apk add --no-cache \
+    pandoc \
+    tini && \
     pandoc --version && \
-    echo "Pandoc installed successfully"
+    echo "✅ Pandoc installed successfully"
 
-# Copy only production files
+# Copy package files and install ONLY production dependencies
 COPY --from=builder /app/package*.json ./
-RUN npm ci --only=production
+RUN npm ci --only=production && \
+    npm cache clean --force
 
-# Copy built application and necessary resources
+# Copy built application
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/src/locales ./src/locales
 
+# Copy necessary runtime resources
+COPY --from=builder /app/README.md ./
+COPY --from=builder /app/LICENSE ./
+
+# Create workspace directory
 RUN mkdir -p /workspace
 
-# Change ownership of the app directory to the node user (uid=1000)
+# Security: Run as non-root user
+# Change ownership to node user (uid=1000, gid=1000)
 RUN chown -R node:node /app /workspace
 
-# Switch to the node user to match host user permissions
+# Switch to non-root user
 USER node
 
+# Set working directory for MCP operations
 WORKDIR /workspace
 
+# Expose dashboard port
 EXPOSE 3000
 
-CMD node /app/dist/index.js ${SPEC_WORKFLOW_PATH:-/workspace} --dashboard --port ${DASHBOARD_PORT:-3000}
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD node -e "process.exit(0)" || exit 1
+
+# Use tini as init system for proper signal handling
+ENTRYPOINT ["/sbin/tini", "--"]
+
+# Default command: Run MCP server with dashboard
+CMD ["node", "/app/dist/index.js", "/workspace", "--dashboard", "--port", "3000"]
+
+# Environment variables (can be overridden)
+ENV NODE_ENV=production \
+    DASHBOARD_PORT=3000 \
+    SPEC_WORKFLOW_PATH=/workspace

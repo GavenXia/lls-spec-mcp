@@ -1,10 +1,60 @@
+version: "3.8"
+
 services:
+  # =============================================================================
+  # Spec-Workflow MCP Server with Dashboard
+  # =============================================================================
   spec-workflow-mcp:
-    build: .
+    # 使用 Docker Hub 镜像（推荐）
+    image: gavinxia/spec-workflow-mcp:latest
+
+    # 或者本地构建（开发时使用）
+    # build:
+    #   context: ..
+    #   dockerfile: containers/Dockerfile
+
+    container_name: spec-workflow-mcp
+
+    # 端口映射：Dashboard 访问端口
     ports:
-      - "${DASHBOARD_PORT:-3000}:${DASHBOARD_PORT:-3000}"
+      - "${DASHBOARD_PORT:-3000}:3000"
+
+    # 卷挂载：持久化 spec-workflow 数据
     volumes:
       - "${SPEC_WORKFLOW_PATH:-./workspace}/.spec-workflow:/workspace/.spec-workflow:rw"
+
+    # 环境变量配置
     environment:
+      - NODE_ENV=production
       - DASHBOARD_PORT=${DASHBOARD_PORT:-3000}
-    restart: no
+      - SPEC_WORKFLOW_PATH=/workspace
+
+    # 资源限制（可选）
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+    # 重启策略
+    restart: unless-stopped
+
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # 网络配置
+    networks:
+      - spec-workflow-net
+
+# 网络定义
+networks:
+  spec-workflow-net:
+    driver: bridge
